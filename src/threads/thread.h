@@ -103,6 +103,7 @@ struct thread
 
     /* Our custom variables for project 1 */
     int64_t wake_up_time;
+    bool wasBlock;
     int priority_old; // right before getting donation
     struct list donation_stack;
   };

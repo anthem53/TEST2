@@ -470,6 +470,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   t->wake_up_time = 0;
+  t->wasBlock = false;
   t->priority_old = priority;
   list_init(&(t->donation_stack));
 
