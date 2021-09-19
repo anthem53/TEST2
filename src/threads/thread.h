@@ -90,9 +90,6 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
-    int64_t wake_up_time;
-
-
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -103,6 +100,11 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    /* Our custom variables for project 1 */
+    int64_t wake_up_time;
+    int priority_old; // right before getting donation
+    struct list donation_stack;
   };
 
 /* If false (default), use round-robin scheduler.
