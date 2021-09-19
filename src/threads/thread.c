@@ -24,6 +24,8 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+static struct list sleep_list;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -92,6 +94,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -237,7 +240,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, priority_cmp, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -308,7 +312,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, priority_cmp, NULL);
+    //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -462,6 +467,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->wake_up_time = 0;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -578,6 +584,54 @@ allocate_tid (void)
 
   return tid;
 }
+/* project 1 function */
+
+void thread_sleep (int64_t wake_up_time)
+{
+  struct thread * cur = thread_current();
+  
+  ASSERT (intr_get_level () == INTR_ON);
+  enum intr_level old_level = intr_disable ();
+
+  cur -> wake_up_time = wake_up_time;
+  list_push_back(&sleep_list, &cur->elem);
+
+  thread_block();
+
+  intr_set_level (old_level);
+}
+
+void thread_wake_up(int64_t current_time)
+{
+  struct list_elem * e = list_begin(&sleep_list);
+
+  while(e != list_end(&sleep_list)){
+    struct thread * t = list_entry(e, struct thread, elem);
+
+    ASSERT(is_thread(t) == true);    
+
+    if(t->wake_up_time <= current_time){
+      e = list_remove(e);
+      thread_unblock(t);
+    }
+    else{
+      e = list_next(e);
+    }
+    
+
+  }
+
+
+}
+
+bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux)
+{
+  struct thread * t1 =  list_entry(e1,struct thread, elem);
+  struct thread * t2 =  list_entry(e2,struct thread, elem);
+
+  return t1->priority > t2->priority;
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
