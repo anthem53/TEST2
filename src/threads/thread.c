@@ -204,6 +204,12 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if(is_yielding() == true)
+  {
+    //printf("***Created and yielding***\n");
+    thread_yield();
+  }
+
   return tid;
 }
 
@@ -343,12 +349,20 @@ thread_set_priority (int new_priority)
   // priority donation 중에는 무턱대고 낮출 수 없다.
   // current thread의 donation_stack의 길이를 검사해서
   // 만약 양수면 old값만 바꾸면 돼
-  if(thread_current()->priority < new_priority ||
-    list_size(&thread_current()->donation_stack) == 0)
+  struct thread *t = thread_current();
+  if(t->priority < new_priority || list_size(&t->donation_stack) == 0)
   {
-    thread_current ()->priority = new_priority;
+    t->priority = new_priority;
+
+    //printf("Thread %s:%d changed to %d\n", t->name, t->priority, new_priority);
   }
-  thread_current ()->priority_old = new_priority;
+  t->priority_old = new_priority;
+
+  if(is_yielding() == true)
+  {
+    //printf("yield() is now calling in %s\n", thread_current()->name);
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -480,11 +494,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wake_up_time = 0;
   t->wasBlock = false;
   t->priority_old = priority;
-  list_init(&(t->donation_stack));
 
   old_level = intr_disable ();
+  list_init(&(t->donation_stack));
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+
+  //printf("Thread %s:%d initialized\n", name, priority);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -642,6 +658,23 @@ void thread_wake_up(int64_t current_time)
   }
 
 
+}
+
+bool is_yielding()
+{
+  int s = list_size(&ready_list);
+  int cp = thread_current()->priority;
+  int rp = list_entry(list_front(&ready_list), struct thread, elem)->priority;
+
+  //printf("s:%d, cp:%d, rp:%d\n", s, cp, rp);
+
+  if(s == 0)
+    return false;
+
+  if(cp <= rp)
+    return true;
+  else
+    return false;
 }
 
 bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux)

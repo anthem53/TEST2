@@ -32,11 +32,6 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-#define LOCK_MAGIC 0xfe7f92aa
-#define lock_entry(SEMA, STRUCT, MEMBER)           \
-        ((STRUCT *) ((uint8_t *) SEMA     \
-                     - offsetof (STRUCT, MEMBER)))
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -79,11 +74,6 @@ sema_down (struct semaphore *sema)
   }
   sema->value--;
   intr_set_level (old_level);
-}
-
-bool is_lock (struct lock *l)
-{
-  return l != NULL && l->magic == LOCK_MAGIC;
 }
 
 /* Down or "P" operation on a semaphore, but only if the
@@ -226,7 +216,6 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
-  lock->magic = LOCK_MAGIC;
   sema_init (&lock->semaphore, 1);
 }
 

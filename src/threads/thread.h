@@ -149,5 +149,6 @@ void thread_sleep(int64_t);
 void thread_wake_up(int64_t);
 bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux);
 void sleep_push_thread_block(void);
+bool is_yielding(void);
 
 #endif /* threads/thread.h */
