@@ -624,6 +624,7 @@ void thread_wake_up(int64_t current_time)
 
     if(t->wake_up_time <= current_time){
       e = list_remove(e);
+      t->wake_up_time = 0;
       thread_unblock(t);
     }
     else{
