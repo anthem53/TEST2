@@ -613,6 +613,13 @@ void thread_sleep (int64_t wake_up_time)
   intr_set_level (old_level);
 }
 
+void sleep_push_thread_block(void)
+{
+  list_push_back(&sleep_list, &thread_current()->elem);
+
+  thread_block();
+}
+
 void thread_wake_up(int64_t current_time)
 {
   struct list_elem * e = list_begin(&sleep_list);

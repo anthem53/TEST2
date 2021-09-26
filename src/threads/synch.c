@@ -307,15 +307,14 @@ lock_release (struct lock *lock)
   sema_up (&lock->semaphore);
 
   old_level = intr_disable();
-  if (!list_empty ((&lock->semaphore)->waiters))
+  if (!list_empty (&(&lock->semaphore)->waiters))
   {
-    lock->holder = list_entry(list_front((&lock->semaphore)->waiters),
+    lock->holder = list_entry(list_front(&(&lock->semaphore)->waiters),
                   struct thread, elem);
   }
   if(thread_current()->wasBlock == true && thread_current()->wake_up_time != 0)
   {
-     list_push_back(&sleep_list, &cur->elem);
-     thread_block();
+     void sleep_push_thread_block();
   }
   intr_set_level(old_level);
 }
