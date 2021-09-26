@@ -98,14 +98,14 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
-    /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
-
     /* Our custom variables for project 1 */
     int64_t wake_up_time;
     bool wasBlock;
     int priority_old; // right before getting donation
     struct list donation_stack;
+
+    /* Owned by thread.c. */
+    unsigned magic;                     /* Detects stack overflow. */
   };
 
 /* If false (default), use round-robin scheduler.

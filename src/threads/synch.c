@@ -80,9 +80,10 @@ sema_down (struct semaphore *sema)
         if(child->status == THREAD_BLOCKED){
           child->wasBlock = true;
         }
+        /*
         if(list_size(&child->donation_stack) == 0){
           child->priority_old = child->priority;
-        }
+        }*/
         list_push_back(&child->donation_stack, &thread_current()->elem);
       }
       //list_push_back (&sema->waiters, &thread_current ()->elem);

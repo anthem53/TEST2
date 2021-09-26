@@ -340,7 +340,15 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  // priority donation 중에는 무턱대고 낮출 수 없다.
+  // current thread의 donation_stack의 길이를 검사해서
+  // 만약 양수면 old값만 바꾸면 돼
+  if(thread_current()->priority < new_priority ||
+    list_size(&thread_current()->donation_stack) == 0)
+  {
+    thread_current ()->priority = new_priority;
+  }
+  thread_current ()->priority_old = new_priority;
 }
 
 /* Returns the current thread's priority. */

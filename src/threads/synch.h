@@ -20,9 +20,9 @@ void sema_self_test (void);
 /* Lock. */
 struct lock
   {
+    unsigned magic; /* detects it is lock or not */
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
-    unsigned magic; /* detects it is lock or not */
   };
 
 void lock_init (struct lock *);
