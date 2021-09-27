@@ -104,6 +104,7 @@ struct thread
     bool wasBlock;
     int priority_old; // right before getting donation
     struct list donation_stack;
+    struct thread* child;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

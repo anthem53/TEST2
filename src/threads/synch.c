@@ -133,6 +133,11 @@ sema_up (struct semaphore *sema)
   }
 
   sema->value++;
+
+  if(is_yielding() == true)
+  {
+    thread_yield();
+  }
   intr_set_level (old_level);
 }
 
@@ -231,6 +236,7 @@ void
 lock_acquire (struct lock *lock)
 {
   enum intr_level old_level;
+  bool test = false;
 
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
@@ -241,23 +247,39 @@ lock_acquire (struct lock *lock)
   {
     struct thread* child = lock->holder;
 
-    if(child->status == THREAD_BLOCKED)
+    for(child = lock->holder; ; child = child->child)
     {
-      child->wasBlock = true;
-      thread_unblock(child);
+      if(child->status == THREAD_BLOCKED)
+      {
+        test = true;
+        child->wasBlock = true;
+        thread_unblock(child);
+      }
+      if(child == lock->holder)
+      {
+        list_insert_ordered(&child->donation_stack,
+                  &thread_current()->elem_donation, priority_cmp, NULL);
+      }
+      if(child->priority < thread_current()->priority)
+      {
+        child->priority = thread_current()->priority;
+      }
+
+      if(child->child == NULL)
+        break;
     }
-    list_insert_ordered(&child->donation_stack, &thread_current()->elem_donation,
-                        priority_cmp, NULL);
-    if(child->priority < thread_current()->priority)
-    {
-      child->priority = thread_current()->priority;
-    }
+
+    thread_current()->child = lock->holder;
   }
   intr_set_level(old_level);
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 
+  if(test == true && is_yielding() == true)
+  {
+    thread_yield();
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -292,12 +314,14 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  //printf(" Start of lock_release\n");
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 
   old_level = intr_disable();
   if (!list_empty (&(&lock->semaphore)->waiters))
   {
+    //printf("  Inside of changing holder\n");
     lock->holder = list_entry(list_front(&(&lock->semaphore)->waiters),
                   struct thread, elem);
   }
@@ -305,6 +329,7 @@ lock_release (struct lock *lock)
   {
      void sleep_push_thread_block();
   }
+
   intr_set_level(old_level);
 }
 

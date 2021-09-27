@@ -206,7 +206,6 @@ thread_create (const char *name, int priority,
 
   if(is_yielding() == true)
   {
-    //printf("***Created and yielding***\n");
     thread_yield();
   }
 
@@ -494,6 +493,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wake_up_time = 0;
   t->wasBlock = false;
   t->priority_old = priority;
+  t->child = NULL;
 
   old_level = intr_disable ();
   list_init(&(t->donation_stack));
@@ -638,6 +638,8 @@ void sleep_push_thread_block(void)
 
 void thread_wake_up(int64_t current_time)
 {
+  enum intr_level old_level;
+
   struct list_elem * e = list_begin(&sleep_list);
 
   while(e != list_end(&sleep_list)){
@@ -653,24 +655,27 @@ void thread_wake_up(int64_t current_time)
     else{
       e = list_next(e);
     }
-
-
   }
-
-
+/*
+  old_level = intr_disable();
+  if(is_yielding() == true)
+  {
+    thread_yield();
+  }
+  intr_set_level(old_level);*/
 }
 
 bool is_yielding()
 {
-  int s = list_size(&ready_list);
-  int cp = thread_current()->priority;
-  int rp = list_entry(list_front(&ready_list), struct thread, elem)->priority;
+  int s, cp, rp;
 
   //printf("s:%d, cp:%d, rp:%d\n", s, cp, rp);
-
+  s = list_size(&ready_list);
   if(s == 0)
     return false;
 
+  cp = thread_current()->priority;
+  rp = list_entry(list_front(&ready_list), struct thread, elem)->priority;
   if(cp <= rp)
     return true;
   else
