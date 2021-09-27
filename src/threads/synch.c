@@ -70,6 +70,8 @@ sema_down (struct semaphore *sema)
   {
     list_insert_ordered(&sema->waiters, &thread_current ()->elem,
                           priority_cmp, NULL);
+    //printf("    * sw size: %d\n", list_size(&sema->waiters));
+    //printf("    * Thread name: %s\n", thread_current()->name);
     thread_block ();
   }
   sema->value--;
@@ -147,12 +149,22 @@ void remove_intersection(struct list* ds, struct list* ws)
 {
   struct list_elem *i;
   struct list_elem *j;
+
+  //printf("     TEST     \n");
+  //printf(" ds size: %d, ws size: %d\n", list_size(ds), list_size(ws));
+
   for(i = list_begin(ws); i != list_end(ws); i = list_next(i))
   {
     struct thread* we = list_entry(i, struct thread, elem);
+    //printf(" Waiters Thread: %s\n", we->name);
+    //printf(" isThread?: %d\n", is_thread2(we));
+    //printf(" ds size: %d\n", list_size(ds));
+
     for(j = list_begin(ds); j != list_end(ds); j = list_next(j))
     {
       struct thread* de = list_entry(j, struct thread, elem_donation);
+      //printf(" Donated from: %s\n", de->name);
+      //printf(" isThread?: %d\n", is_thread2(de));
       if(we == de)
       {
         list_remove(j);
@@ -160,6 +172,7 @@ void remove_intersection(struct list* ds, struct list* ws)
       }
     }
   }
+  //printf("     TEST     \n");
   return;
 }
 
@@ -253,6 +266,12 @@ lock_acquire (struct lock *lock)
       {
         test = true;
         child->wasBlock = true;
+
+        if(child->child != NULL)
+        {
+          list_remove(&child->elem);
+        }
+
         thread_unblock(child);
       }
       if(child == lock->holder)
@@ -275,6 +294,7 @@ lock_acquire (struct lock *lock)
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  thread_current()->child = NULL;
 
   if(test == true && is_yielding() == true)
   {
@@ -316,7 +336,6 @@ lock_release (struct lock *lock)
 
   //printf(" Start of lock_release\n");
   lock->holder = NULL;
-  sema_up (&lock->semaphore);
 
   old_level = intr_disable();
   if (!list_empty (&(&lock->semaphore)->waiters))
@@ -324,10 +343,21 @@ lock_release (struct lock *lock)
     //printf("  Inside of changing holder\n");
     lock->holder = list_entry(list_front(&(&lock->semaphore)->waiters),
                   struct thread, elem);
+
+  //printf("  End of changing holder\n");
   }
+  intr_set_level(old_level);
+
+  //printf(" Before sema up\n");
+  sema_up (&lock->semaphore);
+  //printf(" After sema up\n");
+
+  old_level = intr_disable();
   if(thread_current()->wasBlock == true && thread_current()->wake_up_time != 0)
   {
-     void sleep_push_thread_block();
+    //printf("  Inside of blocking thread");
+    sleep_push_thread_block();
+    //printf("  End of blocking thread");
   }
 
   intr_set_level(old_level);

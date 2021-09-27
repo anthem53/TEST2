@@ -690,6 +690,11 @@ bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux)
   return t1->priority > t2->priority;
 }
 
+bool is_thread2 (struct thread *t)
+{
+  return t != NULL && t->magic == THREAD_MAGIC;
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

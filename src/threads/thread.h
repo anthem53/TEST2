@@ -151,5 +151,7 @@ void thread_wake_up(int64_t);
 bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux);
 void sleep_push_thread_block(void);
 bool is_yielding(void);
+bool is_thread2 (struct thread *t);
+
 
 #endif /* threads/thread.h */
