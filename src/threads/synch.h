@@ -43,6 +43,7 @@ void cond_broadcast (struct condition *, struct lock *);
 
 bool is_lock (struct lock *l);
 void remove_intersection(struct list* l1, struct list* l2);
+bool priority_cmp_cv(struct list_elem * e1, struct  list_elem* e2 ,void * aux);
 
 /* Optimization barrier.
 
