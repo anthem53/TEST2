@@ -63,7 +63,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-int load_avg;
+int64_t load_avg;
 
 
 static void kernel_thread (thread_func *, void *aux);
@@ -100,7 +100,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
- 
+
   load_avg = 0;
 
   /* Set up a thread structure for the running thread. */
@@ -192,7 +192,7 @@ thread_create (const char *name, int priority,
 
   /* Initialize thread. */
   init_thread (t, name, priority);
- 
+
   t->recent_cpu = thread_current()->recent_cpu;
   tid = t->tid = allocate_tid ();
 
@@ -395,7 +395,7 @@ thread_set_nice (int nice)
   {
     thread_yield();
   }
- 
+
 }
 
 /* Returns the current thread's nice value. */
@@ -676,13 +676,6 @@ void thread_wake_up(int64_t current_time)
       e = list_next(e);
     }
   }
-/*
-  old_level = intr_disable();
-  if(is_yielding() == true)
-  {
-    thread_yield();
-  }
-  intr_set_level(old_level);*/
 }
 
 bool is_yielding()
@@ -717,27 +710,25 @@ bool is_thread2 (struct thread *t)
 
 void mlfqs_priority_calculate(void)
 {
-  struct thread * t; 
-  int64_t priority ;
- 
+  struct thread * t;
+  int64_t priority;
   ASSERT(thread_mlfqs == true);
 
-  t= thread_current();
-  priority  = sub(sub(fp(PRI_MAX), div(fp(t->recent_cpu), fp(4)) ),   
-                          fp(t->nice * 2)) ;
-  t-> priority = int_z(priority);
-  //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);  
+  t = thread_current();
+  priority  = sub( sub(fp(PRI_MAX), div(fp(t->recent_cpu), fp(4))),
+                   fp(t->nice * 2)) ;
+  t->priority = int_z(priority);
+  //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);
 }
 
 void mlfqs_recent_cpu_calculate(void)
 {
   struct list_elem *e;
-
   ASSERT(thread_mlfqs == true);
-  e  = list_begin(&all_list);
 
+  e  = list_begin(&all_list);
   while(e != list_end(&all_list)){
-    struct  thread * t = list_entry (e, struct thread, allelem);
+    struct thread* t = list_entry (e, struct thread, allelem);
 
     int64_t recent_cpu_fp = fp(t->recent_cpu);
     int64_t two,one,load_avg_fp;
@@ -747,36 +738,36 @@ void mlfqs_recent_cpu_calculate(void)
     load_avg_fp = fp(load_avg);
     nice_fp = fp(t->nice);
 
-    result = add(mul(div(mul(two,load_avg_fp), add(mul(two , load_avg_fp ),one)) , recent_cpu_fp), nice_fp );
-     
+    result = add( mul( div( mul(two,load_avg_fp),
+                            add(mul(two , load_avg_fp ), one)),
+                       recent_cpu_fp),
+                  nice_fp );
+
     t->recent_cpu = int_z(result);
-    
+
     e = list_next(e);
   }
-  
-  //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice,
-
+  //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
 }
 
+
+/* Number of Ready state Thread using MLFQS */
 void mlfqs_load_avg_calculate(void)
 {
   ASSERT(thread_mlfqs == true);
-  load_avg = int_z(add(mul(div(fp(59),fp(60)) , fp(load_avg)),
-                 mul(div(fp(1),fp(60)),
-                            add(fp(list_size(&ready_list)) ,fp(is_idle_thread()? 0 : 1)))
-                ));
-  
+  load_avg = int_z(add( mul( div(fp(59),fp(60)) , fp(load_avg)),
+                        mul(div(fp(1),fp(60)),
+                            fp(list_size(&ready_list) + (is_idle_thread()? 0 : 1))
+                           )
+                      )
+                  );
  //load_avg = (59/60)*load_avg + (1/60)*ready_threads
 }
 
 bool is_idle_thread(void)
 {
   return thread_current() == idle_thread;
-
 }
-
-
-
 
 
 /* Offset of `stack' member within `struct thread'.
