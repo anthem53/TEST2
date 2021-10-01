@@ -72,6 +72,13 @@ sema_down (struct semaphore *sema)
                           priority_cmp, NULL);
     //printf("    * sw size: %d\n", list_size(&sema->waiters));
     //printf("    * Thread name: %s\n", thread_current()->name);
+/*
+    if(strcmp(thread_current()->name, "low") == 0 ||
+    strcmp(thread_current()->name, "med") == 0 ||
+    strcmp(thread_current()->name, "high") == 0)
+    {
+      printf("name: %s, ws: %d\n", thread_current()->name, list_size(&sema->waiters));
+    }*/
     thread_block ();
   }
   sema->value--;
@@ -116,6 +123,7 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
   if (!list_empty (&sema->waiters))
   {
       struct thread* current = thread_current();
@@ -259,6 +267,12 @@ lock_acquire (struct lock *lock)
   if((&lock->semaphore)->value == 0)
   {
     struct thread* child = lock->holder;
+/*
+    if(strcmp(thread_current()->name, "high") == 0)
+    {
+      printf("*** name:%s, holder:%s, ws:%d\n", thread_current()->name,
+            lock->holder->name, list_size(&(&lock->semaphore)->waiters));
+    }*/
 
     for(child = lock->holder; ; child = child->child)
     {
@@ -268,6 +282,10 @@ lock_acquire (struct lock *lock)
         child->wasBlock = true;
 
         if(child->child != NULL)
+        {
+          list_remove(&child->elem);
+        }
+        else if(child->wake_up_time == 0)
         {
           list_remove(&child->elem);
         }
