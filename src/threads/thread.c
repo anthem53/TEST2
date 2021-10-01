@@ -11,6 +11,8 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixpoint.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -61,6 +63,9 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+int load_avg;
+
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -95,10 +100,13 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
+ 
+  load_avg = 0;
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
+  initial_thread->recent_cpu = 0;
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -184,6 +192,8 @@ thread_create (const char *name, int priority,
 
   /* Initialize thread. */
   init_thread (t, name, priority);
+ 
+  t->recent_cpu = thread_current()->recent_cpu;
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -373,9 +383,19 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED)
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  struct thread* current = thread_current();
+  current->nice = nice;
+
+  /* priority recalculate */
+  mlfqs_priority_calculate();
+  /*if highest -> yield!*/
+  if(is_yielding() == true)
+  {
+    thread_yield();
+  }
+ 
 }
 
 /* Returns the current thread's nice value. */
@@ -383,23 +403,21 @@ int
 thread_get_nice (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->recent_cpu;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -494,6 +512,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wasBlock = false;
   t->priority_old = priority;
   t->child = NULL;
+  t->nice = 0;
+  //t->recent_cpu  = 0;
 
   old_level = intr_disable ();
   list_init(&(t->donation_stack));
@@ -694,6 +714,69 @@ bool is_thread2 (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
 }
+
+void mlfqs_priority_calculate(void)
+{
+  struct thread * t; 
+  int64_t priority ;
+ 
+  ASSERT(thread_mlfqs == true);
+
+  t= thread_current();
+  priority  = sub(sub(fp(PRI_MAX), div(fp(t->recent_cpu), fp(4)) ),   
+                          fp(t->nice * 2)) ;
+  t-> priority = int_z(priority);
+  //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);  
+}
+
+void mlfqs_recent_cpu_calculate(void)
+{
+  struct list_elem *e;
+
+  ASSERT(thread_mlfqs == true);
+  e  = list_begin(&all_list);
+
+  while(e != list_end(&all_list)){
+    struct  thread * t = list_entry (e, struct thread, allelem);
+
+    int64_t recent_cpu_fp = fp(t->recent_cpu);
+    int64_t two,one,load_avg_fp;
+    int64_t result , nice_fp;
+    two = fp(2);
+    one = fp(1);
+    load_avg_fp = fp(load_avg);
+    nice_fp = fp(t->nice);
+
+    result = add(mul(div(mul(two,load_avg_fp), add(mul(two , load_avg_fp ),one)) , recent_cpu_fp), nice_fp );
+     
+    t->recent_cpu = int_z(result);
+    
+    e = list_next(e);
+  }
+  
+  //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice,
+
+}
+
+void mlfqs_load_avg_calculate(void)
+{
+  ASSERT(thread_mlfqs == true);
+  load_avg = int_z(add(mul(div(fp(59),fp(60)) , fp(load_avg)),
+                 mul(div(fp(1),fp(60)),
+                            add(fp(list_size(&ready_list)) ,fp(is_idle_thread()? 0 : 1)))
+                ));
+  
+ //load_avg = (59/60)*load_avg + (1/60)*ready_threads
+}
+
+bool is_idle_thread(void)
+{
+  return thread_current() == idle_thread;
+
+}
+
+
+
 
 
 /* Offset of `stack' member within `struct thread'.

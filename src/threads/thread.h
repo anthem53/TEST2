@@ -105,6 +105,8 @@ struct thread
     int priority_old; // right before getting donation
     struct list donation_stack;
     struct thread* child;
+    int nice;
+    int recent_cpu;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
@@ -152,6 +154,11 @@ bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux);
 void sleep_push_thread_block(void);
 bool is_yielding(void);
 bool is_thread2 (struct thread *t);
+void mlfqs_priority_calculate(void);
+void mlfqs_recent_cpu_calculate(void);
+void mlfqs_load_avg_calculate(void);
+bool is_idle_thread(void);
+
 
 
 #endif /* threads/thread.h */
