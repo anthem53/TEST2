@@ -90,16 +90,21 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
-    int64_t wake_up_time;
-
-
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    struct list_elem elem_donation;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
+
+    /* Our custom variables for project 1 */
+    int64_t wake_up_time;
+    bool wasBlock;
+    int priority_old; // right before getting donation
+    struct list donation_stack;
+    struct thread* child;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
@@ -144,6 +149,9 @@ int thread_get_load_avg (void);
 void thread_sleep(int64_t);
 void thread_wake_up(int64_t);
 bool priority_cmp (struct list_elem * e1, struct  list_elem* e2 ,void * aux);
+void sleep_push_thread_block(void);
+bool is_yielding(void);
+bool is_thread2 (struct thread *t);
 
 
 #endif /* threads/thread.h */
