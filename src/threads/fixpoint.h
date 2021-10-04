@@ -5,6 +5,17 @@
 
 #define f (1 << q)
 
+int fp(int n);
+int int_z(int x);
+int int_n (int x);
+int add(int x, int y);
+int sub(int x, int y);
+int add_int(int x, int n);
+int sub_int (int x , int n);
+int mul(int x, int y);
+int mul_int(int x, int n);
+int div(int x, int y);
+int div_int(int x, int n);
 
 int fp(int n)
 {

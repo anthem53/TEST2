@@ -408,10 +408,7 @@ thread_set_nice (int nice)
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  enum intr_level old_level = intr_disable ();
   int result = int_n(thread_current()->nice);
-  intr_set_level(old_level);
   return result;
 }
 
@@ -419,9 +416,7 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  enum intr_level old_level = intr_disable ();
   int result = int_n(mul_int(load_avg, 100));
-  intr_set_level(old_level);
   return result;
 }
 
@@ -429,9 +424,7 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void)
 {
-  enum intr_level old_level = intr_disable ();
   int result = int_n(mul_int(thread_current()->recent_cpu, 100));
-  intr_set_level(old_level);
   return result;
 }
 
@@ -528,7 +521,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority_old = priority;
   t->child = NULL;
   t->nice = 0;
-  //t->recent_cpu  = 0;
 
   old_level = intr_disable ();
   list_init(&(t->donation_stack));
@@ -728,13 +720,19 @@ void mlfqs_priority_calculate(void)
   struct thread * t;
   int nice2;
   int recentD4;
+  struct list_elem* e;
 
   ASSERT(thread_mlfqs == true);
 
-  t = thread_current();
-  nice2 = mul_int(t->nice, 2);
-  recentD4 = div_int(t->recent_cpu, 4);
-  thread_current()->priority = int_n(fp(PRI_MAX) - recentD4 - nice2);
+  e  = list_begin(&all_list);
+  while(e != list_end(&all_list)){
+    t = list_entry(e, struct thread, allelem);
+    nice2 = mul_int(t->nice, 2);
+    recentD4 = div_int(t->recent_cpu, 4);
+    t->priority = int_n(fp(PRI_MAX) - recentD4 - nice2);
+
+    e = list_next(e);
+  }
   //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);
 }
 
@@ -748,11 +746,13 @@ void mlfqs_recent_cpu_calculate(void)
     struct thread* t;
     int load2;
     int load2p1;
+    int coff;
 
     t = list_entry (e, struct thread, allelem);
     load2 = mul_int(load_avg, 2);
     load2p1 = add_int(load2, 1);
-    t->recent_cpu = mul(div(load2, load2p1), t->recent_cpu) + t->nice;
+    coff = div(load2, load2p1);
+    t->recent_cpu = mul(coff, t->recent_cpu) + t->nice;
     e = list_next(e);
   }
   //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
@@ -765,11 +765,9 @@ void mlfqs_load_avg_calculate(void)
   ASSERT(thread_mlfqs == true);
 
   int num59 = fp(59);
-  int num1 = fp(1);
-  int coff1 = div_int(num59, 60);
-  int coff2 = div_int(num1, 60);
   int ready_threads = list_size(&ready_list) + (thread_current() != idle_thread);
-  load_avg = mul(coff1 , load_avg) + mul_int(coff2, ready_threads);
+  load_avg = mul(num59 , load_avg) + fp(ready_threads);
+  load_avg = div_int(load_avg, 60);
  //load_avg = (59/60)*load_avg + (1/60)*ready_threads
 }
 
