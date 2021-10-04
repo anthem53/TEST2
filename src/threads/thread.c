@@ -386,7 +386,7 @@ void
 thread_set_nice (int nice)
 {
   struct thread* current = thread_current();
-  current->nice = nice;
+  current->nice = fp(nice);
 
   /* priority recalculate */
   mlfqs_priority_calculate();
@@ -395,7 +395,6 @@ thread_set_nice (int nice)
   {
     thread_yield();
   }
-
 }
 
 /* Returns the current thread's nice value. */
@@ -403,21 +402,21 @@ int
 thread_get_nice (void)
 {
   /* Not yet implemented. */
-  return thread_current()->nice;
+  return int_n(thread_current()->nice);
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-  return load_avg;
+  return int_n(mul(load_avg, fp(100)));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  return thread_current()->recent_cpu;
+  return int_n(mul(thread_current()->recent_cpu, fp(100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -717,7 +716,7 @@ void mlfqs_priority_calculate(void)
   t = thread_current();
   priority  = sub( sub(fp(PRI_MAX), div(fp(t->recent_cpu), fp(4))),
                    fp(t->nice * 2)) ;
-  t->priority = int_z(priority);
+  t->priority = int_n(priority);
   //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);
 }
 
@@ -743,7 +742,7 @@ void mlfqs_recent_cpu_calculate(void)
                        recent_cpu_fp),
                   nice_fp );
 
-    t->recent_cpu = int_z(result);
+    t->recent_cpu = result;
 
     e = list_next(e);
   }
@@ -755,12 +754,10 @@ void mlfqs_recent_cpu_calculate(void)
 void mlfqs_load_avg_calculate(void)
 {
   ASSERT(thread_mlfqs == true);
-  load_avg = int_z(add( mul( div(fp(59),fp(60)) , fp(load_avg)),
-                        mul(div(fp(1),fp(60)),
-                            fp(list_size(&ready_list) + (is_idle_thread()? 0 : 1))
-                           )
-                      )
-                  );
+  load_avg = add( mul( div(fp(59),fp(60)) , fp(load_avg)),
+                  mul(div(fp(1),fp(60)),
+                      fp(list_size(&ready_list) + (is_idle_thread()? 0 : 1))
+                    ));
  //load_avg = (59/60)*load_avg + (1/60)*ready_threads
 }
 

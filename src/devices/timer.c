@@ -186,9 +186,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
       mlfqs_load_avg_calculate();
     }
 
-    if (is_idle_thread() != false)
+    if (is_idle_thread() == false)
     {
-      thread_current()->recent_cpu++;
+      thread_current()->recent_cpu
+       = add(thread_current()->recent_cpu, fp(1));
     }
     if (ticks % TIMER_FREQ == 0)
     {
@@ -200,6 +201,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
       mlfqs_priority_calculate();
     }
   }
+  
   thread_wake_up(ticks);
 }
 

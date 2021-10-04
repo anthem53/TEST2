@@ -70,15 +70,6 @@ sema_down (struct semaphore *sema)
   {
     list_insert_ordered(&sema->waiters, &thread_current ()->elem,
                           priority_cmp, NULL);
-    //printf("    * sw size: %d\n", list_size(&sema->waiters));
-    //printf("    * Thread name: %s\n", thread_current()->name);
-/*
-    if(strcmp(thread_current()->name, "low") == 0 ||
-    strcmp(thread_current()->name, "med") == 0 ||
-    strcmp(thread_current()->name, "high") == 0)
-    {
-      printf("name: %s, ws: %d\n", thread_current()->name, list_size(&sema->waiters));
-    }*/
     thread_block ();
   }
   sema->value--;
@@ -267,7 +258,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   old_level = intr_disable ();
-  if((&lock->semaphore)->value == 0 && thread_mlfqs == false)
+  if(thread_mlfqs == false && (&lock->semaphore)->value == 0)
   {
     struct thread* child = lock->holder;
 
@@ -349,30 +340,22 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  //printf(" Start of lock_release\n");
   lock->holder = NULL;
 
   old_level = intr_disable();
   if (!list_empty (&(&lock->semaphore)->waiters))
   {
-    //printf("  Inside of changing holder\n");
     lock->holder = list_entry(list_front(&(&lock->semaphore)->waiters),
                   struct thread, elem);
-
-  //printf("  End of changing holder\n");
   }
   intr_set_level(old_level);
 
-  //printf(" Before sema up\n");
   sema_up (&lock->semaphore);
-  //printf(" After sema up\n");
 
   old_level = intr_disable();
-  if(thread_current()->wasBlock == true && thread_current()->wake_up_time != 0)
+  if(thread_mlfqs == false && thread_current()->wasBlock == true && thread_current()->wake_up_time != 0)
   {
-    //printf("  Inside of blocking thread");
     sleep_push_thread_block();
-    //printf("  End of blocking thread");
   }
 
   intr_set_level(old_level);
