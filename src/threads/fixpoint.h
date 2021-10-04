@@ -6,61 +6,61 @@
 #define f (1 << q)
 
 
-int64_t fp(int64_t n)
+int fp(int n)
 {
   return n * f;
 }
 
-int64_t int_z(int64_t x)
+int int_z(int x)
 {
   return x / f;
 }
 
-int64_t int_n (int64_t x)
+int int_n (int x)
 {
   if( x >=0 ){
-    return ( x + f/2) / f;
+    return ( x + (f>>1)) / f;
   }
   else{
-    return ( x - f/2) / f;
+    return ( x - (f>>1)) / f;
   }
 }
 
-int64_t add(int64_t x, int64_t y)
+int add(int x, int y)
 {
   return x + y;
 }
-int64_t sub(int64_t x, int64_t y)
+int sub(int x, int y)
 {
   return x - y;
 }
 
-int64_t add_int(int64_t x, int64_t n)
+int add_int(int x, int n)
 {
   return x + n * f;
 }
 
-int64_t sub_int (int64_t x , int64_t n)
+int sub_int (int x , int n)
 {
   return x - n * f;
 }
 
-int64_t mul(int64_t x, int64_t y)
+int mul(int x, int y)
 {
   return ((int64_t)x) * y / f;
 }
 
-int64_t mul_int(int64_t x, int64_t n)
+int mul_int(int x, int n)
 {
   return x * n;
 }
 
-int64_t div(int64_t x, int64_t y)
+int div(int x, int y)
 {
   return ((int64_t)x) * f / y;
 }
 
-int64_t div_int(int64_t x, int64_t n)
+int div_int(int x, int n)
 {
   return x / n;
 }

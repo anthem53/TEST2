@@ -105,8 +105,8 @@ struct thread
     int priority_old; // right before getting donation
     struct list donation_stack;
     struct thread* child;
-    int64_t nice;
-    int64_t recent_cpu;
+    int nice;
+    int recent_cpu;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

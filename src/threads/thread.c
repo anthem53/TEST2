@@ -63,7 +63,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-int64_t load_avg;
+static int load_avg;
 
 
 static void kernel_thread (thread_func *, void *aux);
@@ -358,7 +358,12 @@ thread_set_priority (int new_priority)
   // priority donation 중에는 무턱대고 낮출 수 없다.
   // current thread의 donation_stack의 길이를 검사해서
   // 만약 양수면 old값만 바꾸면 돼
+
   struct thread *t = thread_current();
+
+  if(thread_mlfqs == true)
+    return;
+
   if(t->priority < new_priority || list_size(&t->donation_stack) == 0)
   {
     t->priority = new_priority;
@@ -386,6 +391,7 @@ void
 thread_set_nice (int nice)
 {
   struct thread* current = thread_current();
+  enum intr_level old_level = intr_disable ();
   current->nice = fp(nice);
 
   /* priority recalculate */
@@ -395,6 +401,7 @@ thread_set_nice (int nice)
   {
     thread_yield();
   }
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
@@ -402,21 +409,30 @@ int
 thread_get_nice (void)
 {
   /* Not yet implemented. */
-  return int_n(thread_current()->nice);
+  enum intr_level old_level = intr_disable ();
+  int result = int_n(thread_current()->nice);
+  intr_set_level(old_level);
+  return result;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-  return int_n(mul(load_avg, fp(100)));
+  enum intr_level old_level = intr_disable ();
+  int result = int_n(mul_int(load_avg, 100));
+  intr_set_level(old_level);
+  return result;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  return int_n(mul(thread_current()->recent_cpu, fp(100));
+  enum intr_level old_level = intr_disable ();
+  int result = int_n(mul_int(thread_current()->recent_cpu, 100));
+  intr_set_level(old_level);
+  return result;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -710,13 +726,15 @@ bool is_thread2 (struct thread *t)
 void mlfqs_priority_calculate(void)
 {
   struct thread * t;
-  int64_t priority;
+  int nice2;
+  int recentD4;
+
   ASSERT(thread_mlfqs == true);
 
   t = thread_current();
-  priority  = sub( sub(fp(PRI_MAX), div(fp(t->recent_cpu), fp(4))),
-                   fp(t->nice * 2)) ;
-  t->priority = int_n(priority);
+  nice2 = mul_int(t->nice, 2);
+  recentD4 = div_int(t->recent_cpu, 4);
+  thread_current()->priority = int_n(fp(PRI_MAX) - recentD4 - nice2);
   //current -> priority = PRI_MAX -(current->recent_cpu / 4) -(nice * 2);
 }
 
@@ -727,23 +745,14 @@ void mlfqs_recent_cpu_calculate(void)
 
   e  = list_begin(&all_list);
   while(e != list_end(&all_list)){
-    struct thread* t = list_entry (e, struct thread, allelem);
+    struct thread* t;
+    int load2;
+    int load2p1;
 
-    int64_t recent_cpu_fp = fp(t->recent_cpu);
-    int64_t two,one,load_avg_fp;
-    int64_t result , nice_fp;
-    two = fp(2);
-    one = fp(1);
-    load_avg_fp = fp(load_avg);
-    nice_fp = fp(t->nice);
-
-    result = add( mul( div( mul(two,load_avg_fp),
-                            add(mul(two , load_avg_fp ), one)),
-                       recent_cpu_fp),
-                  nice_fp );
-
-    t->recent_cpu = result;
-
+    t = list_entry (e, struct thread, allelem);
+    load2 = mul_int(load_avg, 2);
+    load2p1 = add_int(load2, 1);
+    t->recent_cpu = mul(div(load2, load2p1), t->recent_cpu) + t->nice;
     e = list_next(e);
   }
   //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
@@ -754,10 +763,13 @@ void mlfqs_recent_cpu_calculate(void)
 void mlfqs_load_avg_calculate(void)
 {
   ASSERT(thread_mlfqs == true);
-  load_avg = add( mul( div(fp(59),fp(60)) , fp(load_avg)),
-                  mul(div(fp(1),fp(60)),
-                      fp(list_size(&ready_list) + (is_idle_thread()? 0 : 1))
-                    ));
+
+  int num59 = fp(59);
+  int num1 = fp(1);
+  int coff1 = div_int(num59, 60);
+  int coff2 = div_int(num1, 60);
+  int ready_threads = list_size(&ready_list) + (thread_current() != idle_thread);
+  load_avg = mul(coff1 , load_avg) + mul_int(coff2, ready_threads);
  //load_avg = (59/60)*load_avg + (1/60)*ready_threads
 }
 
