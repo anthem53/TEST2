@@ -173,28 +173,19 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  enum intr_level old_level;
-  bool test;
-
   ticks++;
   thread_tick ();
 
   if(thread_mlfqs == true) {
-    /* Per 1 second, */
     if (ticks % TIMER_FREQ == 0)
     {
       mlfqs_load_avg_calculate();
-    }
-
-    if (is_idle_thread() != false)
-    {
-      thread_current()->recent_cpu++;
-    }
-    if (ticks % TIMER_FREQ == 0)
-    {
       mlfqs_recent_cpu_calculate();
     }
-
+    if (is_idle_thread() == false)
+    {
+      thread_current()->recent_cpu = add_int(thread_current()->recent_cpu, 1);
+    }
     if (ticks % 4 == 0)
     {
       mlfqs_priority_calculate();
