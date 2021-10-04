@@ -128,15 +128,18 @@ sema_up (struct semaphore *sema)
   {
       struct thread* current = thread_current();
 
-      remove_intersection(&current->donation_stack, &sema->waiters);
-      if(list_size(&current->donation_stack) == 0)
+      if(thread_mlfqs == false)
       {
-        current->priority = current->priority_old;
-      }
-      else
-      {
-        current->priority = list_entry(list_front(&current->donation_stack),
-                            struct thread, elem_donation)->priority;
+        remove_intersection(&current->donation_stack, &sema->waiters);
+        if(list_size(&current->donation_stack) == 0)
+        {
+          current->priority = current->priority_old;
+        }
+        else
+        {
+          current->priority = list_entry(list_front(&current->donation_stack),
+                              struct thread, elem_donation)->priority;
+        }
       }
       thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                   struct thread, elem));
@@ -264,15 +267,9 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   old_level = intr_disable ();
-  if((&lock->semaphore)->value == 0)
+  if((&lock->semaphore)->value == 0 && thread_mlfqs == false)
   {
     struct thread* child = lock->holder;
-/*
-    if(strcmp(thread_current()->name, "high") == 0)
-    {
-      printf("*** name:%s, holder:%s, ws:%d\n", thread_current()->name,
-            lock->holder->name, list_size(&(&lock->semaphore)->waiters));
-    }*/
 
     for(child = lock->holder; ; child = child->child)
     {
@@ -314,7 +311,7 @@ lock_acquire (struct lock *lock)
   lock->holder = thread_current ();
   thread_current()->child = NULL;
 
-  if(test == true && is_yielding() == true)
+  if(thread_mlfqs == false && test == true && is_yielding() == true)
   {
     thread_yield();
   }

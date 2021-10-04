@@ -6,7 +6,7 @@
 #define f (1 << q)
 
 
-int64_t  fp(int64_t n)
+int64_t fp(int64_t n)
 {
   return n * f;
 }
@@ -25,6 +25,7 @@ int64_t int_n (int64_t x)
     return ( x - f/2) / f;
   }
 }
+
 int64_t add(int64_t x, int64_t y)
 {
   return x + y;
@@ -63,4 +64,3 @@ int64_t div_int(int64_t x, int64_t n)
 {
   return x / n;
 }
-

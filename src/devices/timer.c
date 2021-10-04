@@ -180,24 +180,23 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_tick ();
 
   if(thread_mlfqs == true) {
- /* Per 1 second, */
-    if (timer_ticks() % TIMER_FREQ == 0)
+    /* Per 1 second, */
+    if (ticks % TIMER_FREQ == 0)
     {
       mlfqs_load_avg_calculate();
-   // NOT IMPLEMENT -> every_thread -> recent_cpu update!
     }
 
-   /* running thread recent increment*/
-    if (is_idle_thread() != false) 
+    if (is_idle_thread() != false)
+    {
       thread_current()->recent_cpu++;
-
-    if (timer_ticks() % TIMER_FREQ == 0)
+    }
+    if (ticks % TIMER_FREQ == 0)
     {
       mlfqs_recent_cpu_calculate();
-      // NOT IMPLEMENT -> every_thread -> recent_cpu update!
     }
-  /*priority calculate!*/
-    if (ticks % 4 == 0){
+
+    if (ticks % 4 == 0)
+    {
       mlfqs_priority_calculate();
     }
   }
